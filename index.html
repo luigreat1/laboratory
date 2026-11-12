@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лаборатория Чудо-Питомцев | Терра-5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        oswald: ['Oswald', 'sans-serif'],
+                        nunito: ['Nunito', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f4fafe;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #1e293b;
+            font-family: 'Nunito', sans-serif;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, .font-oswald {
+            font-family: 'Oswald', sans-serif;
+        }
+
+        /* Futuristic Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.9);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid #e0f2fe;
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.1);
+            border-radius: 20px;
+        }
+
+        .species-card {
+            border: 2px solid transparent;
+            background: white;
+            padding: 4px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .species-card.state-midle { border-color: #fbbf24; background-color: #fffbeb; }
+        .species-card.state-good { border-color: #22c55e; background-color: #f0fdf4; }
+        .species-card.state-bad { border-color: #ef4444; background-color: #fef2f2; }
+
+        .species-card.active {
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+            transform: translateY(-2px) scale(1.02);
+            z-index: 10;
+        }
+        .species-card.active::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 12px;
+            border: 3px solid #0ea5e9;
+            pointer-events: none;
+        }
+
+        .species-img {
+            width: 100%;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            pointer-events: none;
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .species-name {
+            font-size: 10px;
+            font-weight: bold;
+            color: #334155;
+            line-height: 1.1;
+            text-align: center;
+            word-break: break-word;
+            padding: 0 2px;
+        }
+
+        .selection-box input[type="checkbox"]:checked + div,
+        .selection-box input[type="radio"]:checked + div {
+            border-color: #0ea5e9;
+            background: #e0f2fe;
+            box-shadow: inset 0 0 0 1px #0ea5e9;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .scanline-effect::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.1), transparent);
+            animation: scanline 4s linear infinite;
+            pointer-events: none;
+        }
+
+        #sim-modal { display: none; }
+        #sim-modal.show { display: flex; }
+
+        /* --- СТИЛИ ДЛЯ СТАРТОВОГО ЭКРАНА --- */
+        #intro-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background-color: #f0f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        #intro-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .image-container {
+            position: relative;
+            width: 95%;
+            max-width: 1400px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        .image-container img {
+            width: 100%;
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .screen-hitbox {
+            position: absolute;
+            top: 10%;
+            left: 43%;
+            width: 53%;
+            height: 80%;
+            cursor: pointer;
+           
+          
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 191, 255, 0.05);
+        }
+        .screen-hitbox:hover {
+            background: rgba(0, 191, 255, 0.15);
+            border-color: #00bfff;
+            box-shadow: 0 0 30px rgba(0, 191, 255, 0.4), inset 0 0 20px rgba(0, 191, 255, 0.3);
+        }
+        .click-hint {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: 3px solid #00bfff;
+            font-family: 'Oswald', sans-serif;
+            font-size: 22px;
+            color: #0284c7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 191, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+        .click-hint i { font-size: 24px; color: #00bfff; }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 191, 255, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 191, 255, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 191, 255, 0.4); }
+        }
+        @media (max-width: 768px) {
+            .click-hint { font-size: 14px; padding: 10px 15px; }
+            .click-hint i { font-size: 16px; }
+        }
+
+        .param-group.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-3 md:p-6">
+
+    <!-- СТАРТОВЫЙ ЭКРАН С КАРТИНКОЙ -->
+    <div id="intro-screen">
+        <div class="image-container">
+            <img src="lui_science.png" alt="Лаборатория ученого Луи">
+            <div class="screen-hitbox" onclick="startLab()" title="Нажми, чтобы войти в лабораторию">
+                <div class="click-hint">
+                    <i class="fa-solid fa-hand-pointer"></i>
+                    Нажми на экран
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ ИНТЕРФЕЙС ЛАБОРАТОРИИ -->
+    <div id="lab-app" class="hidden flex-col h-full w-full max-w-7xl mx-auto flex-grow">
+        
+        <!-- HEADER -->
+        <header class="w-full mb-4 glass-panel p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-4">
+                <button onclick="backToIntro()" class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 hover:bg-sky-200 flex items-center justify-center transition" title="Вернуться назад">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-sky-900 uppercase tracking-wide flex items-center gap-2">
+                        <i class="fa-solid fa-dna text-sky-500"></i> Лаборатория Чудо-Питомцев
+                    </h1>
+                    <p class="text-xs text-sky-600 font-semibold">Настройка среды обитания для видов с планеты Терра-5</p>
+                </div>
+            </div>
+            
+            <!-- Блок куратора (просто блок с аватаром, без ссылки) -->
+<div class="flex items-center gap-4">
+    
+        </header>
+
+        <!-- MISSION ALERT -->
+        <div class="w-full mb-4 glass-panel p-4 border-l-4 border-l-amber-400 flex items-start gap-3">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mt-0.5"></i>
+            <p class="text-sm md:text-base font-semibold text-slate-700">
+                «Земляне, в опасности <span class="text-rose-500 font-bold">семь видов</span> с Терра-5. Мне надо создать для них правильную среду для каждого. Помогите!»
+            
+    <!-- Круглый контейнер с аватаркой -->
+    <div class="w-16 h-16 rounded-full bg-sky-100 flex items-center justify-center overflow-hidden border border-sky-200 shrink-0">
+        <img src="lui_s.png" alt="Ученый Луи" class="w-full h-full object-cover">
+    </div>
+    
+    <div class="flex flex-col">
+    </div>
+</div>
+			</p>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 flex-grow">
+            
+            <!-- LEFT PANEL: CONTROLS -->
+            <section class="xl:col-span-5 flex flex-col gap-4">
+                
+                <!-- SPECIES SELECTION -->
+                <div class="glass-panel p-4">
+                    <h2 class="text-xs font-bold text-sky-800 uppercase mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-list-ul text-sky-500"></i> Выбор вида (7)
+                    </h2>
+                    <div id="species-container" class="grid grid-cols-4 gap-2">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
+
+                <!-- DESCRIPTION -->
+                <div class="glass-panel p-4 border-l-4 border-l-sky-400">
+                    <div class="flex items-center justify-between mb-2">
+                        <span id="active-species-name" class="font-bold text-lg text-sky-900 font-oswald uppercase">...</span>
+                        <span id="active-species-type" class="text-[10px] font-bold bg-sky-100 text-sky-700 px-2 py-0.5 rounded uppercase tracking-wider">...</span>
+                    </div>
+                    <p id="active-species-desc" class="text-sm font-semibold text-slate-600 leading-snug">
+                        ...
+                    </p>
+                </div>
+
+                <!-- PARAMETERS (DYNAMIC) -->
+                <div class="glass-panel p-4">
+                    <h2 class="text-xs font-bold text-sky-800 uppercase mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-sky-500"></i> Параметры
+                    </h2>
+                    <div class="space-y-3" id="params-container">
+                        
+                        <!-- ЖИВОТНЫЕ -->
+                        <div class="param-group animal-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Потребность в воде</span><span id="val-water" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="water" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group animal-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Температурный диапазон</span><span id="val-temp" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="temp" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group animal-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Яркий окрас</span><span id="val-color" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="color" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group animal-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Скорость роста</span><span id="val-growth" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="growth" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group animal-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Скорость передвижения</span><span id="val-speed" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="speed" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group animal-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Защита от хищников</span><span id="val-defense" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="defense" min="1" max="10" value="5" step="1">
+                        </div>
+
+                        <!-- РАСТЕНИЯ -->
+                        <div class="param-group plant-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Глубина корней</span><span id="val-root" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="root" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group plant-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Скорость роста</span><span id="val-growth-plant" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="growth-plant" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group plant-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Потребность в свете</span><span id="val-light" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="light" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group plant-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Устойчивость к засухе</span><span id="val-drought-plant" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="drought-plant" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group plant-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Потребность в воде</span><span id="val-water-plant" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="water-plant" min="1" max="10" value="5" step="1">
+                        </div>
+                        <div class="param-group plant-param space-y-1 hidden">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Температурный диапазон</span><span id="val-temp-plant" class="text-sky-600">5</span>
+                            </div>
+                            <input type="range" id="temp-plant" min="1" max="10" value="5" step="1">
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ENVIRONMENT SELECTION -->
+                <div class="glass-panel p-4 flex flex-col gap-4">
+                    
+                    <!-- Природные зоны (Checkboxes) -->
+                    <div>
+                        <h2 class="text-xs font-bold text-sky-800 uppercase mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-earth-americas text-sky-500"></i> Природная зона <span class="text-[9px] text-slate-400 normal-case ml-1">(можно несколько)</span>
+                        </h2>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="selection-box cursor-pointer">
+                                <input type="checkbox" name="zone" value="arctic" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-snowflake text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Арктические пустыни</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="checkbox" name="zone" value="tundra" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-wind text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Тундра</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="checkbox" name="zone" value="rainforest" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-tree text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Влажные леса</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="checkbox" name="zone" value="taiga" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-green-50 text-green-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-tree-city text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Хвойные леса</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="checkbox" name="zone" value="savanna" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-sun text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Саванны</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="checkbox" name="zone" value="desert" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-mountain-sun text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Пустыни</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Среды обитания (Radio) -->
+                    <div>
+                        <h2 class="text-xs font-bold text-sky-800 uppercase mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-sky-500"></i> Среда обитания
+                        </h2>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="selection-box cursor-pointer">
+                                <input type="radio" name="habitat" value="air" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-feather text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Воздушная</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="radio" name="habitat" value="soil" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0"><i class="fa-solid fa-mound text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Почвенная</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="radio" name="habitat" value="water" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-water text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Водная</div>
+                                </div>
+                            </label>
+                            <label class="selection-box cursor-pointer">
+                                <input type="radio" name="habitat" value="organism" class="hidden">
+                                <div class="p-2 rounded-xl border border-slate-200 bg-white transition flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-bacterium text-xs"></i></div>
+                                    <div class="text-[10px] font-bold text-slate-700">Другой организм</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="start-sim-btn" class="w-full py-4 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-2xl shadow-lg shadow-sky-200 transition text-lg tracking-wide flex items-center justify-center gap-3 font-oswald uppercase mt-2">
+                    <i class="fa-solid fa-play"></i> Запустить симуляцию
+                </button>
+            </section>
+
+            <!-- RIGHT PANEL: VISUALIZER -->
+            <section class="xl:col-span-7 flex flex-col gap-4">
+                <div class="glass-panel w-full h-[400px] md:h-[650px] relative overflow-hidden flex flex-col scanline-effect border-2 border-sky-200 items-center justify-center bg-slate-50/50">
+                    
+                    <!-- TOP HUD -->
+                    <div class="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
+                        <div class="bg-white/90 backdrop-blur border border-sky-200 px-4 py-2 rounded-xl text-xs font-bold text-sky-800 shadow-sm flex flex-wrap items-center gap-2 max-w-[70%]">
+                            <span id="hud-zone-icon" class="text-cyan-500"><i class="fa-solid fa-earth-americas"></i></span>
+                            <span id="hud-zone-name">Зоны не выбраны</span>
+                            <span class="text-slate-300">|</span>
+                            <span id="hud-habitat-name" class="text-slate-600">Среда не выбрана</span>
+                        </div>
+                        <div id="sim-status" class="hidden bg-amber-400 text-slate-900 px-4 py-2 rounded-xl font-bold text-xs shadow-lg animate-pulse flex items-center gap-2 shrink-0">
+                            <i class="fa-solid fa-satellite-dish"></i> Анализ: <span id="timer-text">5.0s</span>
+                        </div>
+                    </div>
+
+                    <!-- БОЛЬШАЯ КАРТИНКА ПИТОМЦА -->
+                    <img id="large-species-image" src="" alt="Питомец" class="max-h-[80%] max-w-[90%] object-contain drop-shadow-2xl transition-all duration-500 z-0">
+                    
+                    <!-- Плашка "Анализ" поверх картинки -->
+                    <div id="analysis-overlay" class="absolute inset-0 bg-white/40 backdrop-blur-sm hidden flex-col items-center justify-center z-20">
+                        <div class="w-16 h-16 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <div class="text-sky-900 font-bold text-xl font-oswald uppercase">Симуляция среды...</div>
+                    </div>
+
+                    <!-- BOTTOM HUD -->
+                    <div class="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end pointer-events-none">
+                        <div class="bg-white/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-500">
+                            <i class="fa-solid fa-image mr-1"></i> Режим: 3D-модель
+                        </div>
+                        <div class="text-[10px] font-mono text-sky-300 tracking-widest">
+                            SYS.ONLINE // TERRA-5
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- RESULT MODAL -->
+    <div id="sim-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-4 border-sky-100 text-center relative transform scale-95 transition-transform duration-300" id="modal-content">
+            
+            <div class="mb-4">
+                <img id="modal-image" src="" alt="Результат" class="w-full h-48 object-contain rounded-xl bg-slate-50 border border-slate-200">
+            </div>
+
+            <h3 id="modal-title" class="text-2xl font-bold font-oswald uppercase mb-3">
+                Успех
+            </h3>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 text-left">
+                <p id="modal-reason" class="text-sm font-semibold text-slate-700 leading-relaxed">
+                    ...
+                </p>
+            </div>
+
+            <button id="close-modal-btn" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow-md transition uppercase tracking-wider text-sm">
+                Продолжить
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- START SCREEN LOGIC ---
+        function startLab() {
+            document.getElementById('intro-screen').classList.add('hidden');
+            document.getElementById('lab-app').classList.remove('hidden');
+            document.getElementById('lab-app').classList.add('flex');
+        }
+
+        function backToIntro() {
+            document.getElementById('lab-app').classList.add('hidden');
+            document.getElementById('lab-app').classList.remove('flex');
+            document.getElementById('intro-screen').classList.remove('hidden');
+        }
+
+        // --- DATA ---
+        // Сначала растения, затем животные. Корнегубка удалена.
+        const speciesData = [
+            { 
+                id: 'svetolist', name: 'Светолист', type: 'растение', 
+                desc: 'Светится в темноте, привлекает опылителей своим излучением.',
+                idealZone: 'tundra', idealHabitat: 'water', idealParams: { root: 4, growth: 5, light: 2, droughtPlant: 5, waterPlant: 8, tempPlant: 5 },
+                images: {
+                    bad: 'svetolist_bad.png',
+                    midle: 'svetolist_midle.png',
+                    good: 'svetolist_good.png'
+                }
+            },
+            { 
+                id: 'gravikus', name: 'Гравикус', type: 'растение', 
+                desc: 'Удерживает воду и питательные вещества благодаря гравитационным шарам.',
+                idealZone: 'arctic', idealHabitat: 'soil', idealParams: { root: 9, growth: 3, light: 3, droughtPlant: 9, waterPlant: 2, tempPlant: 2 },
+                images: {
+                    bad: 'gravikus_bad.png',
+                    midle: 'gravikus_midle.png',
+                    good: 'gravikus_good.png'
+                }
+            },
+            { 
+                id: 'aerocorn', name: 'Аэрокорн', type: 'растение', 
+                desc: 'Ловит ветер и использует его поток для активного роста.',
+                idealZone: 'desert', idealHabitat: 'air', idealParams: { root: 2, growth: 8, light: 9, droughtPlant: 10, waterPlant: 1, tempPlant: 9 },
+                images: {
+                    bad: 'aerocorn_bad.png',
+                    midle: 'aerocorn_midle.png',
+                    good: 'aerocorn_good.png'
+                }
+            },
+            { 
+                id: 'plavunchik', name: 'Плавунчик', type: 'животное', 
+                desc: 'Дышит жабрами, тело покрыто слизью. Очень боится соленой воды и любит температуру +25°C.',
+                idealZone: 'rainforest', idealHabitat: 'water', idealParams: { water: 9, temp: 8, color: 6, growth: 5, speed: 7, defense: 3 },
+                images: {
+                    bad: 'plavunchik_bad.png',
+                    midle: 'plavunchik_midle.png',
+                    good: 'plavunchik_good.png'
+                }
+            },
+            { 
+                id: 'temnushka', name: 'Темнушка', type: 'животное', 
+                desc: 'Не любит свет, роет ходы, питается корнями. У него слабые легкие, нужен доступ к воздуху.',
+                idealZone: 'taiga', idealHabitat: 'soil', idealParams: { water: 4, temp: 5, color: 2, growth: 4, speed: 3, defense: 6 },
+                images: {
+                    bad: 'temnushka_bad.png',
+                    midle: 'temnushka_midle.png',
+                    good: 'temnushka_good.png'
+                }
+            },
+            { 
+                id: 'vertolet', name: 'Ветролёт', type: 'животное', 
+                desc: 'Имеет легкие крылья. Его крылья разрушаются от влаги, а избыток кислорода – это яд.',
+                idealZone: 'savanna', idealHabitat: 'air', idealParams: { water: 2, temp: 7, color: 8, growth: 5, speed: 10, defense: 4 },
+                images: {
+                    bad: 'vertolet_bad.png',
+                    midle: 'vertolet_midle.png',
+                    good: 'vertolet_good.png'
+                }
+            }
+        ];
+
+        let selectedSpeciesIndex = 0;
+        let speciesStates = speciesData.map(() => 'midle');
+        
+        let state = {
+            zones: [], 
+            habitat: '',
+            isSimulating: false, simTime: 3.0
+        };
+
+        // --- UI SETUP ---
+        const speciesContainer = document.getElementById('species-container');
+        const largeImg = document.getElementById('large-species-image');
+        const analysisOverlay = document.getElementById('analysis-overlay');
+
+        function renderSpeciesCards() {
+            speciesContainer.innerHTML = '';
+            speciesData.forEach((item, index) => {
+                const card = document.createElement('button');
+                card.className = `species-card state-${speciesStates[index]} ${index === selectedSpeciesIndex ? 'active' : ''}`;
+                
+                const thumbImg = item.images.midle; 
+                
+                card.innerHTML = `
+                    <img src="${thumbImg}" alt="${item.name}" class="species-img" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlMmU4ZjAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzY0NzQ4YiI+0J3QtdGCINC60LDRgNGC0LjQvdC60Lg8L3RleHQ+PC9zdmc+';">
+                    <div class="species-name">${item.name}</div>
+                `;
+                card.addEventListener('click', () => selectSpecies(index));
+                speciesContainer.appendChild(card);
+            });
+        }
+
+        function updateLargeImage() {
+            const item = speciesData[selectedSpeciesIndex];
+            largeImg.src = item.images[speciesStates[selectedSpeciesIndex]];
+        }
+
+        function selectSpecies(index) {
+            if (state.isSimulating) return; 
+
+            selectedSpeciesIndex = index;
+            const item = speciesData[index];
+            
+            document.querySelectorAll('.species-card').forEach((c, i) => c.classList.toggle('active', i === index));
+            
+            document.getElementById('active-species-name').textContent = item.name;
+            document.getElementById('active-species-type').textContent = item.type;
+            document.getElementById('active-species-desc').textContent = item.desc;
+
+            const animalParams = document.querySelectorAll('.animal-param');
+            const plantParams = document.querySelectorAll('.plant-param');
+
+            if (item.type === 'животное') {
+                animalParams.forEach(el => el.classList.remove('hidden'));
+                plantParams.forEach(el => el.classList.add('hidden'));
+            } else {
+                animalParams.forEach(el => el.classList.add('hidden'));
+                plantParams.forEach(el => el.classList.remove('hidden'));
+            }
+
+            document.querySelectorAll('input[type="range"]').forEach(input => {
+                input.value = 5;
+                const valSpan = document.getElementById(`val-${input.id}`);
+                if (valSpan) valSpan.textContent = '5';
+            });
+
+            updateLargeImage();
+        }
+
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const valSpan = document.getElementById(`val-${e.target.id}`);
+                if (valSpan) valSpan.textContent = e.target.value;
+            });
+        });
+
+        document.querySelectorAll('input[name="zone"]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                state.zones = Array.from(document.querySelectorAll('input[name="zone"]:checked')).map(cb => cb.value);
+                updateHUD();
+            });
+        });
+
+        document.querySelectorAll('input[name="habitat"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.habitat = e.target.value;
+                updateHUD();
+            });
+        });
+
+        function updateHUD() {
+            const zones = { arctic: 'Арктика', tundra: 'Тундра', rainforest: 'Влажные леса', taiga: 'Хвойные леса', savanna: 'Саванны', desert: 'Пустыни' };
+            const habitats = { air: 'Воздушная', soil: 'Почвенная', water: 'Водная', organism: 'Другой организм' };
+            
+            let zNames = state.zones.map(z => zones[z]).join(', ');
+            if (!zNames) zNames = 'Зоны не выбраны';
+            
+            const hName = state.habitat ? habitats[state.habitat] : 'Среда не выбрана';
+            
+            document.getElementById('hud-zone-name').textContent = zNames;
+            document.getElementById('hud-habitat-name').textContent = hName;
+        }
+
+        // --- SIMULATION LOGIC ---
+        function checkEnvironment() {
+            const current = speciesData[selectedSpeciesIndex];
+
+            if (state.zones.length === 0 || !state.habitat) {
+                return { success: false, reason: "Ошибка: Вы не выбрали природную зону или среду обитания." };
+            }
+
+            let reasons = [];
+            let isSuccess = true;
+
+            if (state.habitat !== current.idealHabitat) {
+                isSuccess = false;
+                reasons.push(`Неправильная среда обитания.`);
+            }
+
+            if (!state.zones.includes(current.idealZone)) {
+                isSuccess = false;
+                reasons.push(`Среди выбранных зон нет подходящей для этого вида.`);
+            }
+
+            let matchedParams = 0;
+            for (let key in current.idealParams) {
+                let inputId = key;
+                if (current.type === 'растение') {
+                    if (key === 'growth') inputId = 'growth-plant';
+                    if (key === 'droughtPlant') inputId = 'drought-plant';
+                    if (key === 'waterPlant') inputId = 'water-plant';
+                    if (key === 'tempPlant') inputId = 'temp-plant';
+                }
+                
+                const inputEl = document.getElementById(inputId);
+                if (inputEl) {
+                    const userVal = parseInt(inputEl.value);
+                    const idealVal = current.idealParams[key];
+                    if (Math.abs(userVal - idealVal) <= 3) {
+                        matchedParams++;
+                    }
+                }
+            }
+
+            if (matchedParams < 4) {
+                isSuccess = false;
+                reasons.push(`Слишком много неверных параметров. Проверьте описание вида.`);
+            }
+
+            if (isSuccess) {
+                return { success: true, reason: `Вид «${current.name}» успешно прижился! Вы правильно подобрали зоны, среду и параметры.` };
+            } else {
+                return { success: false, reason: `Ошибка адаптации. ${reasons.join(' ')}` };
+            }
+        }
+
+        document.getElementById('start-sim-btn').addEventListener('click', () => {
+            if (state.isSimulating) return;
+            state.isSimulating = true;
+            state.simTime = 3.0;
+            
+            const statusEl = document.getElementById('sim-status');
+            const timerEl = document.getElementById('timer-text');
+            statusEl.classList.remove('hidden');
+            statusEl.classList.add('flex');
+            
+            const btn = document.getElementById('start-sim-btn');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            
+            analysisOverlay.classList.remove('hidden');
+            analysisOverlay.classList.add('flex');
+
+            const timer = setInterval(() => {
+                state.simTime -= 0.1;
+                timerEl.textContent = `${Math.max(0, state.simTime).toFixed(1)}s`;
+                if (state.simTime <= 0) {
+                    clearInterval(timer);
+                    finishSimulation();
+                }
+            }, 100);
+        });
+
+        function finishSimulation() {
+            state.isSimulating = false;
+            const statusEl = document.getElementById('sim-status');
+            statusEl.classList.add('hidden');
+            statusEl.classList.remove('flex');
+            
+            const btn = document.getElementById('start-sim-btn');
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            
+            analysisOverlay.classList.add('hidden');
+            analysisOverlay.classList.remove('flex');
+
+            const result = checkEnvironment();
+            const current = speciesData[selectedSpeciesIndex];
+            
+            const modal = document.getElementById('sim-modal');
+            const imageEl = document.getElementById('modal-image');
+            const title = document.getElementById('modal-title');
+            const reasonEl = document.getElementById('modal-reason');
+            const content = document.getElementById('modal-content');
+
+            if (result.success) {
+                speciesStates[selectedSpeciesIndex] = 'good';
+                imageEl.src = current.images.good;
+                title.textContent = 'УСПЕХ';
+                title.className = 'text-2xl font-bold font-oswald text-emerald-600 uppercase mb-3';
+            } else {
+                speciesStates[selectedSpeciesIndex] = 'bad';
+                imageEl.src = current.images.bad;
+                title.textContent = 'ОШИБКА';
+                title.className = 'text-2xl font-bold font-oswald text-rose-600 uppercase mb-3';
+            }
+
+            renderSpeciesCards();
+            updateLargeImage();
+
+            reasonEl.textContent = result.reason;
+            modal.classList.add('show');
+            setTimeout(() => content.style.transform = 'scale(1)', 10);
+        }
+
+        document.getElementById('close-modal-btn').addEventListener('click', () => {
+            const modal = document.getElementById('sim-modal');
+            const content = document.getElementById('modal-content');
+            content.style.transform = 'scale(0.95)';
+            setTimeout(() => modal.classList.remove('show'), 200);
+        });
+
+        // --- INIT ---
+        window.onload = () => {
+            renderSpeciesCards();
+            selectSpecies(0);
+            updateHUD();
+        };
+    </script>
+</body>
+</html>
